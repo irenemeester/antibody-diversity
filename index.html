@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factoría de BCR - Recombinación Somática</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-light {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        .dna-segment { transition: all 0.2s ease; cursor: pointer; }
+        .selected { border: 2px solid white; box-shadow: 0 0 10px rgba(255,255,255,0.5); transform: scale(1.1); z-index: 10; }
+        .hidden-step { display: none; }
+        .antibody-container { position: relative; width: 180px; height: 180px; margin: 0 auto; }
+        .chain { stroke-width: 8; fill: none; stroke-linecap: round; transition: all 1s ease; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans min-h-screen">
+
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-blue-400 mb-2">Fábrica de BCR</h1>
+            <p class="text-slate-400 italic">Laboratorio de Inmunología: Recombinación Somática</p>
+        </header>
+
+        <main class="max-w-4xl mx-auto bg-slate-800 rounded-2xl p-6 shadow-2xl border border-slate-700">
+            
+            <!-- PASO 1: CADENA PESADA -->
+            <section id="section-heavy">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-blue-400 mb-4">1. Locus del dominio VH de la cadena pesada (IgH)</h2>
+                    <span class="text-xs bg-blue-900 px-2 py-1 rounded">Etapa: Pro-B</span>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Segmentos V</label>
+                        <div class="flex flex-wrap gap-1.5 mt-1" id="pool-vh"></div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Segmentos D</label>
+                        <div class="flex flex-wrap gap-1.5 mt-1" id="pool-dh"></div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Segmentos J</label>
+                        <div class="flex flex-wrap gap-1.5 mt-1" id="pool-jh"></div>
+                    </div>
+                </div>
+                <div class="mt-8 p-4 bg-slate-900 rounded-xl text-center border border-slate-700">
+                    <div id="display-h" class="text-lg font-mono mb-4 text-slate-500 italic">Selecciona V-D-J para activar enzimas</div>
+                    <button id="btn-h" disabled class="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 px-6 py-2 rounded-full font-bold text-sm transition-all">
+                        Activar RAG y TdT
+                    </button>
+                </div>
+            </section>
+
+            <!-- INTERMEDIO: RESULTADO CADENA H -->
+            <section id="section-h-result" class="hidden-step text-center py-10">
+                <h3 class="text-2xl font-bold text-blue-400 mb-4">Dominio VH Recombinado</h3>
+                <div class="flex justify-center mb-6">
+                    <svg viewBox="0 0 100 100" class="w-32 h-32">
+                        <path d="M40,90 L40,40 L10,10" class="chain stroke-blue-500" />
+                        <path d="M60,90 L60,40 L90,10" class="chain stroke-blue-500" />
+                    </svg>
+                </div>
+                <div class="bg-slate-900 p-4 rounded-lg inline-block text-left mb-6">
+                    <p class="text-xs text-slate-500 uppercase">Proteína H Generada:</p>
+                    <p id="seq-h" class="font-mono text-blue-300 text-lg"></p>
+                </div>
+                <br>
+                <button onclick="goToLight()" class="bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded-full font-bold">
+                    Siguiente: Recombinar Cadena Ligera
+                </button>
+            </section>
+
+            <!-- PASO 2: CADENA LIGERA -->
+            <section id="section-light" class="hidden-step">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-purple-400 uppercase">2. Locus de VL de la Cadena Ligera (IgL)</h2>
+                    <span class="text-xs bg-purple-900 px-2 py-1 rounded">Etapa: Pre-B</span>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Segmentos V</label>
+                        <div class="flex flex-wrap gap-1.5 mt-1" id="pool-vl"></div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Segmentos J</label>
+                        <div class="flex flex-wrap gap-1.5 mt-1" id="pool-jl"></div>
+                    </div>
+                </div>
+                <div class="mt-8 p-4 bg-slate-900 rounded-xl text-center border border-slate-700">
+                    <div id="display-l" class="text-lg font-mono mb-4 text-slate-500 italic">Selecciona V-J</div>
+                    <button id="btn-l" disabled class="bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 px-6 py-2 rounded-full font-bold text-sm transition-all">
+                        Activar RAG y TdT (Ligera)
+                    </button>
+                </div>
+            </section>
+
+            <!-- INTERMEDIO: RESULTADO CADENA L -->
+            <section id="section-l-result" class="hidden-step text-center py-10">
+                <h3 class="text-2xl font-bold text-purple-400 mb-4">Dominio VL Recombinado</h3>
+                <div class="flex justify-center mb-6">
+                    <svg viewBox="0 0 100 100" class="w-24 h-24">
+                        <path d="M20,80 L80,20" class="chain stroke-purple-400" />
+                    </svg>
+                </div>
+                <div class="bg-slate-900 p-4 rounded-lg inline-block text-left mb-6">
+                    <p class="text-xs text-slate-500 uppercase">Proteína L Generada:</p>
+                    <p id="seq-l" class="font-mono text-purple-300 text-lg"></p>
+                </div>
+                <br>
+                <button onclick="combineAll()" class="bg-green-600 hover:bg-green-500 px-8 py-3 rounded-full font-bold animate-bounce">
+                    Ensamblar BCR Final
+                </button>
+            </section>
+
+            <!-- PASO FINAL: ENSAMBLAJE -->
+            <section id="section-final" class="hidden-step text-center">
+                <h2 class="text-3xl font-bold text-green-400 mb-6">Inmunoglobulina Completa</h2>
+                <div class="bg-slate-900 p-8 rounded-3xl border border-slate-700 shadow-inner">
+                    <div class="antibody-container mb-8">
+                        <svg viewBox="0 0 100 100" class="w-full h-full">
+                            <path d="M50,90 L50,50 L85,15" class="chain stroke-blue-500" />
+                            <path d="M50,90 L50,50 L15,15" class="chain stroke-blue-500" />
+                            <path d="M72,37 L98,11" class="chain stroke-purple-400" />
+                            <path d="M28,37 L2,11" class="chain stroke-purple-400" />
+                        </svg>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-slate-500 text-[10px] uppercase font-bold tracking-widest">Código de Parátopo</p>
+                            <h3 id="final-code" class="text-3xl font-black text-white"></h3>
+                        </div>
+                        <div class="text-[10px] text-slate-400 italic">
+                            Especificidad única generada por recombinación somática V(D)J
+                        </div>
+                    </div>
+                </div>
+                <button onclick="location.reload()" class="mt-8 text-slate-500 hover:text-white underline text-sm">Reiniciar Proceso</button>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const config = {
+            h: { v: 20, d: 15, j: 6 },
+            l: { v: 20, j: 5 }
+        };
+
+        let hSel = { v: null, d: null, j: null };
+        let lSel = { v: null, j: null };
+        let hTdT = "", lTdT = "";
+
+        // Inicialización
+        function init() {
+            createBtns('pool-vh', 'v', config.h.v, 'h', 'bg-blue-600');
+            createBtns('pool-dh', 'd', config.h.d, 'h', 'bg-emerald-600');
+            createBtns('pool-jh', 'j', config.h.j, 'h', 'bg-amber-600');
+            
+            createBtns('pool-vl', 'v', config.l.v, 'l', 'bg-purple-600');
+            createBtns('pool-jl', 'j', config.l.j, 'l', 'bg-pink-600');
+        }
+
+        function createBtns(cid, type, count, chain, color) {
+            const container = document.getElementById(cid);
+            for (let i = 1; i <= count; i++) {
+                const b = document.createElement('div');
+                b.className = `dna-segment ${color} w-7 h-7 flex items-center justify-center rounded text-[9px] font-bold`;
+                b.innerText = `${type.toUpperCase()}${i}`;
+                b.onclick = () => {
+                    container.querySelectorAll('.dna-segment').forEach(s => s.classList.remove('selected'));
+                    b.classList.add('selected');
+                    if (chain === 'h') { hSel[type] = i; checkH(); }
+                    else { lSel[type] = i; checkL(); }
+                };
+                container.appendChild(b);
+            }
+        }
+
+        function checkH() {
+            if (hSel.v && hSel.d && hSel.j) {
+                // Nomenclatura simplificada en pantalla de selección
+                document.getElementById('display-h').innerText = `V${hSel.v}, D${hSel.d}, J${hSel.j}`;
+                document.getElementById('display-h').classList.replace('text-slate-500', 'text-blue-400');
+                document.getElementById('btn-h').disabled = false;
+            }
+        }
+
+        function checkL() {
+            if (lSel.v && lSel.j) {
+                // Nomenclatura simplificada en pantalla de selección
+                document.getElementById('display-l').innerText = `V${lSel.v}, J${lSel.j}`;
+                document.getElementById('display-l').classList.replace('text-slate-500', 'text-purple-400');
+                document.getElementById('btn-l').disabled = false;
+            }
+        }
+
+        document.getElementById('btn-h').onclick = async function() {
+            this.innerText = "RAG cortando...";
+            await wait(800);
+            this.innerText = "TdT editando...";
+            hTdT = Math.random().toString(36).substring(2, 5).toUpperCase();
+            await wait(800);
+            document.getElementById('section-heavy').classList.add('hidden-step');
+            document.getElementById('section-h-result').classList.remove('hidden-step');
+            // Resultado intermedio con nomenclatura (H)
+            document.getElementById('seq-h').innerText = `(H) V${hSel.v}, D${hSel.d}, J${hSel.j}`;
+        };
+
+        function goToLight() {
+            document.getElementById('section-h-result').classList.add('hidden-step');
+            document.getElementById('section-light').classList.remove('hidden-step');
+        }
+
+        document.getElementById('btn-l').onclick = async function() {
+            this.innerText = "RAG activada en IgL...";
+            await wait(800);
+            this.innerText = "TdT añadiendo nucleótidos P y N...";
+            lTdT = Math.random().toString(36).substring(2, 5).toUpperCase();
+            await wait(800);
+            document.getElementById('section-light').classList.add('hidden-step');
+            document.getElementById('section-l-result').classList.remove('hidden-step');
+            // Resultado intermedio con nomenclatura (K)
+            document.getElementById('seq-l').innerText = `(K) V${lSel.v}, J${lSel.j}`;
+        };
+
+        function combineAll() {
+            document.getElementById('section-l-result').classList.add('hidden-step');
+            document.getElementById('section-final').classList.remove('hidden-step');
+            
+            const heavyText = `(H) V${hSel.v}, D${hSel.d}, J${hSel.j}`;
+            const lightText = `(K) V${lSel.v}, J${lSel.j}`;
+            
+            document.getElementById('final-code').innerHTML = 
+                `<span class="text-blue-400">${heavyText}</span><span class="text-white"> : </span><span class="text-purple-400">${lightText}</span><br><span class="text-green-500 text-sm font-mono mt-2">[TdT:${hTdT}-${lTdT}]</span>`;
+        }
+
+        function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+        init();
+    </script>
+</body>
+</html>
